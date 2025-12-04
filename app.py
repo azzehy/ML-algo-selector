@@ -127,3 +127,16 @@ if st.session_state.data_loaded:
         grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy' if task_type == 'classification' else 'r2', n_jobs=-1)
         grid_search.fit(X, y)
         return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+    
+    def run_bayesian(X, y, task_type):
+        if task_type != 'classification':
+            return None, None, None
+        
+        param_grid = {
+            'var_smoothing': np.logspace(-10, -8, 10)
+        }
+        
+        model = GaussianNB()
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy', n_jobs=-1)
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
