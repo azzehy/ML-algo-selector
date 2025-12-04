@@ -110,3 +110,20 @@ if st.session_state.data_loaded:
         
         return X_scaled, y, task_type
     
+    #nbdaw nchwiya sahlin
+    def run_decision_tree(X, y, task_type):
+        param_grid = {
+            'max_depth': [None, 5, 10, 20, 30],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4],
+            'criterion': ['gini', 'entropy'] if task_type == 'classification' else ['squared_error', 'absolute_error']
+        }
+        
+        if task_type == 'classification':
+            model = DecisionTreeClassifier(random_state=42)
+        else:
+            model = DecisionTreeRegressor(random_state=42)
+        
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy' if task_type == 'classification' else 'r2', n_jobs=-1)
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
