@@ -140,3 +140,33 @@ if st.session_state.data_loaded:
         grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy', n_jobs=-1)
         grid_search.fit(X, y)
         return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+    
+    def run_knn(X, y, task_type):
+        param_grid = {
+            'n_neighbors': [3, 5, 7, 9, 11],
+            'weights': ['uniform', 'distance'],
+            'metric': ['euclidean', 'manhattan', 'minkowski']
+        }
+        
+        if task_type == 'classification':
+            model = KNeighborsClassifier()
+        else:
+            model = KNeighborsRegressor()
+        
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy' if task_type == 'classification' else 'r2', n_jobs=-1)
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+    
+    def run_linear_regression(X, y, task_type):
+        if task_type != 'regression':
+            return None, None, None
+        
+        param_grid = {
+            'fit_intercept': [True, False],
+            'positive': [True, False]
+        }
+        
+        model = LinearRegression()
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
