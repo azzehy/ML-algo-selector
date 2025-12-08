@@ -170,3 +170,147 @@ if st.session_state.data_loaded:
         grid_search = GridSearchCV(model, param_grid, cv=5, scoring='r2', n_jobs=-1)
         grid_search.fit(X, y)
         return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+    
+    def run_logistic_regression(X, y, task_type):
+        if task_type != 'classification':
+            return None, None, None
+        
+        param_grid = {
+            'C': [0.001, 0.01, 0.1, 1, 10, 100],
+            'penalty': ['l2'],
+            'solver': ['lbfgs', 'liblinear', 'newton-cg'],
+            'max_iter': [1000]
+        }
+        
+        model = LogisticRegression(random_state=42)
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy', n_jobs=-1)
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+    
+    # Train button
+    if st.button("🚀 Train Model", type="primary", use_container_width=True):
+        with st.spinner("Training model with GridSearchCV... This may take a few minutes."):
+            try:
+                # Prepare data
+                X, y, task_type = prepare_data(df, target_column)
+                
+                st.info(f"📌 Task Type Detected: **{task_type.upper()}**")
+                
+                # Algorithm mapping
+                algorithms = {
+                    "Decision Tree": run_decision_tree,
+                    "Bayesian (Naive Bayes)": run_bayesian,
+                    "KNN (K-Nearest Neighbors)": run_knn,
+                    "Linear Regression": run_linear_regression,
+                    "Logistic Regression": run_logistic_regression
+                }
+                
+                # Train model
+                model, best_params, best_score = algorithms[algorithm](X, y, task_type)
+                
+                if model is None:
+                    st.error(f"❌ {algorithm} is not compatible with {task_type} tasks!")
+                else:
+                    st.success("✅ Model trained successfully!")
+                    
+                    # Store results
+                    st.session_state.model = model
+                    st.session_state.best_params = best_params
+                    st.session_state.best_score = best_score
+                    st.session_state.X = X
+                    st.session_state.y = y
+                    st.session_state.task_type = task_type
+                    st.session_state.model_trained = True
+                    
+            except Exception as e:
+                st.error(f"❌ Error during training: {e}")
+    
+    # Display results
+    if st.session_state.model_trained:
+        st.markdown("---")
+        st.subheader("📈 Results")
+        
+        model = st.session_state.model
+        best_params = st.session_state.best_params
+        best_score = st.session_state.best_score
+        X = st.session_state.X
+        y = st.session_state.y
+        task_type = st.session_state.task_type
+        
+        # Best parameters
+        st.markdown("### 🎯 Best Parameters from GridSearchCV")
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            st.metric("Best CV Score", f"{best_score:.4f}")
+        with col2:
+            params_df = pd.DataFrame([best_params]).T
+            params_df.columns = ['Value']
+            st.dataframe(params_df, use_container_width=True)
+        
+        # Model performance
+        st.markdown("### 📊 Model Performance on Full Dataset")
+        predictions = model.predict(X)
+        
+        if task_type == 'classification':
+            accuracy = accuracy_score(y, predictions)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Accuracy", f"{accuracy:.4f}")
+                st.markdown("**Confusion Matrix:**")
+                cm = confusion_matrix(y, predictions)
+                st.dataframe(pd.DataFrame(cm), use_container_width=True)
+            
+            with col2:
+                st.markdown("**Classification Report:**")
+                report = classification_report(y, predictions, output_dict=True)
+                report_df = pd.DataFrame(report).transpose()
+                st.dataframe(report_df, use_container_width=True)
+        
+        else:
+            mse = mean_squared_error(y, predictions)
+            rmse = np.sqrt(mse)
+            r2 = r2_score(y, predictions)
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Mean Squared Error", f"{mse:.4f}")
+            with col2:
+                st.metric("Root Mean Squared Error", f"{rmse:.4f}")
+            with col3:
+                st.metric("R² Score", f"{r2:.4f}")
+            
+            # Predictions vs Actual
+            results_df = pd.DataFrame({
+                'Actual': y,
+                'Predicted': predictions,
+                'Difference': y - predictions
+            })
+            st.markdown("**Sample Predictions:**")
+            st.dataframe(results_df.head(20), use_container_width=True)
+
+else:
+    st.info("👈 Please upload a CSV file from the sidebar to get started")
+    
+    # Show example
+    with st.expander("ℹ️ How to use this app"):
+        st.markdown("""
+        1. **Upload your CSV file** using the file uploader in the sidebar
+        2. **Select your target column** (the variable you want to predict)
+        3. **Choose an algorithm** from the dropdown menu
+        4. **Click 'Train Model'** to start training with GridSearchCV
+        5. **View the results** including best parameters and model performance
+        
+        **Supported Algorithms:**
+        - SVM (Classification & Regression)
+        - Neural Networks (Classification & Regression)
+        - Decision Tree (Classification & Regression)
+        - Naive Bayes (Classification only)
+        - KNN (Classification & Regression)
+        - Linear Regression (Regression only)
+        - Logistic Regression (Classification only)
+        """)
+
+# Footer
+st.markdown("---")
+st.markdown("Made with ❤️ using Streamlit | GridSearchCV with 5-Fold Cross-Validation")
