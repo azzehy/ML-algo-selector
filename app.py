@@ -110,7 +110,45 @@ if st.session_state.data_loaded:
         
         return X_scaled, y, task_type
     
-    #nbdaw nchwiya sahlin
+    # Algorithm functions
+    def run_svm(X, y, task_type):
+        if task_type == 'classification':
+            param_grid = {
+                'C': [0.1, 1, 10, 100],
+                'kernel': ['linear', 'rbf', 'poly'],
+                'gamma': ['scale', 'auto', 0.1, 0.01]
+            }
+            model = SVC()
+        else:
+            param_grid = {
+                'C': [0.1, 1, 10, 100],
+                'kernel': ['linear', 'rbf', 'poly'],
+                'gamma': ['scale', 'auto', 0.1, 0.01],
+                'epsilon': [0.1, 0.2, 0.5]
+            }
+            model = SVR()
+        
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy' if task_type == 'classification' else 'r2', n_jobs=-1)
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+    
+    def run_neural_network(X, y, task_type):
+        param_grid = {
+            'hidden_layer_sizes': [(50,), (100,), (50, 50), (100, 50)],
+            'activation': ['relu', 'tanh'],
+            'alpha': [0.0001, 0.001, 0.01],
+            'learning_rate': ['constant', 'adaptive']
+        }
+        
+        if task_type == 'classification':
+            model = MLPClassifier(max_iter=1000, random_state=42)
+        else:
+            model = MLPRegressor(max_iter=1000, random_state=42)
+        
+        grid_search = GridSearchCV(model, param_grid, cv=5, scoring='accuracy' if task_type == 'classification' else 'r2', n_jobs=-1)
+        grid_search.fit(X, y)
+        return grid_search.best_estimator_, grid_search.best_params_, grid_search.best_score_
+    
     def run_decision_tree(X, y, task_type):
         param_grid = {
             'max_depth': [None, 5, 10, 20, 30],
@@ -198,6 +236,8 @@ if st.session_state.data_loaded:
                 
                 # Algorithm mapping
                 algorithms = {
+                    "SVM (Support Vector Machine)": run_svm,
+                    "Neural Network": run_neural_network,
                     "Decision Tree": run_decision_tree,
                     "Bayesian (Naive Bayes)": run_bayesian,
                     "KNN (K-Nearest Neighbors)": run_knn,
